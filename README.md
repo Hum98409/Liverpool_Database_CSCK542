@@ -1,73 +1,61 @@
-# React + TypeScript + Vite
+# University Database Query Portal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This repository contains the frontend UI for a university database query application built with React, TypeScript, and Vite. The purpose of the app is to provide a simple web interface through which users can run database queries, view results in tables, generate reports, and export results.
+## What this app includes
 
-Currently, two official plugins are available:
+The UI supports a query-driven workflow and is designed around academic database use cases. The application includes:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- A dashboard page with summary information
+- A query centre for running multiple academic queries
+- A reports page for displaying and downloading report data
+- CSV and PDF export support
+- Mock API responses using MSW
+- Unit tests using Vitest and React Testing Library
 
-## React Compiler
+The query UI supports these academic queries:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Find all students enrolled in a specific course taught by a particular lecturer
+2. List all students with an average grade above 70% who are in their final year of studies
+3. Identify students who have not registered for any courses in the current semester
+4. Retrieve the contact information for the faculty advisor of a specific student
+5. Search for lecturers with expertise in a particular research area
+6. List all courses taught by lecturers in a specific department
+7. Identify lecturers who have supervised the most student research projects
+8. Generate a report on the publications of lecturers in the past year
+9. Retrieve the names of students advised by a specific lecturer
+10. Find all staff members employed in a specific department
+11. Identify employees who supervise student employees in a particular program
 
-## Expanding the ESLint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Before running the project, install the following tools on your machine:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js, preferably the current LTS version
+- npm, which normally comes with Node.js
+- Git
+- Visual Studio Code, if you want an easy editor experience
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+You can confirm Node and npm are installed correctly by running:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+node -v
+npm -v
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The node_modules folder is not stored in Git, which is normal. After cloning the repository, install all dependencies by running:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm install
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+To start the development server, run:
+
+
+```bash
+npm run dev
+```
+
+To run all tests once:
+```bash
+npm run test:run
 ```
