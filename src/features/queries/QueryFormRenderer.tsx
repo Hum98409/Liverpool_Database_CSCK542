@@ -236,7 +236,7 @@ export default function QueryFormRenderer({ queryKey }: { queryKey: QueryKey }) 
       case 'lecturersByResearchArea':
         return (
           <Stack spacing={2}>
-            <Typography variant="h6">Lecturers by Research Area</Typography>
+            <Typography variant="h6">Lecturers by Expertise or Research Interest</Typography>
             <TextField
               label="Keyword"
               value={keyword}

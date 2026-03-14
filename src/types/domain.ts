@@ -11,17 +11,6 @@ export type Program = {
   name: string;
   degree_awarded: string;
   duration_years: number;
-  enrolment_details: string;
-  created_at: string;
-};
-
-export type Lecturer = {
-  lecturer_id: number;
-  department_id: number;
-  full_name: string;
-  email: string;
-  areas_of_expertise: string;
-  research_interests: string;
   created_at: string;
 };
 
@@ -36,12 +25,50 @@ export type Student = {
   created_at: string;
 };
 
-export type Semester = {
-  semester_id: number;
-  code: string;
-  start_date: string;
-  end_date: string;
-  is_current: boolean;
+export type Lecturer = {
+  lecturer_id: number;
+  department_id: number;
+  full_name: string;
+  email: string;
+  course_load: number;
+  created_at: string;
+};
+
+export type LecturerExpertise = {
+  expertise_id: number;
+  lecturer_id: number;
+  expertise_name: string;
+  created_at: string;
+};
+
+export type LecturerInterest = {
+  interest_id: number;
+  lecturer_id: number;
+  interest_name: string;
+  created_at: string;
+};
+
+export type LecturerPublication = {
+  publication_id: number;
+  lecturer_id: number;
+  research_project_id: number | null;
+  title: string;
+  publication_date: string;
+  venue: string;
+  doi: string;
+};
+
+export type NonAcademicStaff = {
+  staff_id: number;
+  department_id: number;
+  full_name: string;
+  job_title: string;
+  employment_type: string;
+  contract_details: string;
+  salary_amount: number;
+  salary_currency: string;
+  emergency_contact: string;
+  created_at: string;
 };
 
 export type Course = {
@@ -62,11 +89,45 @@ export type CourseOffering = {
   schedule_text: string;
 };
 
-export type LecturerPublication = {
-  publication_id: number;
-  lecturer_id: number;
+export type Semester = {
+  semester_id: number;
+  code: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+};
+
+export type ResearchProject = {
+  research_project_id: number;
+  principal_investigator_lecturer_id: number;
   title: string;
-  publication_date: string;
-  venue: string;
-  doi: string;
+  start_date: string;
+  end_date: string | null;
+  outcome: string;
+  created_at: string;
+};
+
+export type ResearchProjectMemberStudent = {
+  research_project_id: number;
+  student_id: number;
+  member_role: string;
+  created_at: string;
+};
+
+export type ResearchProjectMemberLecturer = {
+  research_project_id: number;
+  lecturer_id: number;
+  member_role: string;
+  created_at: string;
+};
+
+export type StudentEmployment = {
+  employment_id: number;
+  student_id: number;
+  program_id: number;
+  supervisor_staff_id: number;
+  job_title: string;
+  start_date: string;
+  end_date: string | null;
+  created_at: string;
 };

@@ -21,8 +21,8 @@ export const queryDefinitions = [
   },
   {
     key: 'lecturersByResearchArea',
-    title: 'Lecturers by Research Area',
-    description: 'Search for lecturers with expertise in a particular research area.',
+    title: 'Lecturers by Expertise or Research Interest',
+    description: 'Search for lecturers with expertise or research interest in a particular area.',
   },
   {
     key: 'coursesByDepartment',

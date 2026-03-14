@@ -3,10 +3,17 @@ import type {
   CourseOffering,
   Department,
   Lecturer,
+  LecturerExpertise,
+  LecturerInterest,
   LecturerPublication,
+  NonAcademicStaff,
   Program,
+  ResearchProject,
+  ResearchProjectMemberLecturer,
+  ResearchProjectMemberStudent,
   Semester,
   Student,
+  StudentEmployment,
 } from '../types/domain';
 
 export const departments: Department[] = [
@@ -22,7 +29,6 @@ export const programs: Program[] = [
     name: 'BSc Computer Science',
     degree_awarded: 'BSc',
     duration_years: 4,
-    enrolment_details: 'Full-time',
     created_at: '2024-01-01',
   },
   {
@@ -31,7 +37,6 @@ export const programs: Program[] = [
     name: 'BSc Information Systems',
     degree_awarded: 'BSc',
     duration_years: 4,
-    enrolment_details: 'Full-time',
     created_at: '2024-01-01',
   },
 ];
@@ -42,8 +47,7 @@ export const lecturers: Lecturer[] = [
     department_id: 1,
     full_name: 'Dr Jane Smith',
     email: 'jane.smith@university.edu',
-    areas_of_expertise: 'Databases, Data Engineering',
-    research_interests: 'Query optimization and distributed databases',
+    course_load: 3,
     created_at: '2024-01-01',
   },
   {
@@ -51,8 +55,7 @@ export const lecturers: Lecturer[] = [
     department_id: 1,
     full_name: 'Dr Peter Brown',
     email: 'peter.brown@university.edu',
-    areas_of_expertise: 'Software Engineering, Web Systems',
-    research_interests: 'Frontend systems and software quality',
+    course_load: 2,
     created_at: '2024-01-01',
   },
   {
@@ -60,17 +63,53 @@ export const lecturers: Lecturer[] = [
     department_id: 2,
     full_name: 'Prof Mary Dube',
     email: 'mary.dube@university.edu',
-    areas_of_expertise: 'Information Systems, Analytics',
-    research_interests: 'Decision support systems',
+    course_load: 2,
     created_at: '2024-01-01',
   },
 ];
 
-export const staffMembers = [
-  { staff_id: 1, department_id: 1, full_name: 'Dr Jane Smith', email: 'jane.smith@university.edu', role: 'Lecturer' },
-  { staff_id: 2, department_id: 1, full_name: 'Dr Peter Brown', email: 'peter.brown@university.edu', role: 'Lecturer' },
-  { staff_id: 3, department_id: 2, full_name: 'Prof Mary Dube', email: 'mary.dube@university.edu', role: 'Professor' },
-  { staff_id: 4, department_id: 1, full_name: 'Sarah Mhlanga', email: 'sarah.mhlanga@university.edu', role: 'Lab Coordinator' },
+export const lecturerExpertise: LecturerExpertise[] = [
+  { expertise_id: 1, lecturer_id: 1, expertise_name: 'Databases', created_at: '2024-01-01' },
+  { expertise_id: 2, lecturer_id: 1, expertise_name: 'Data Engineering', created_at: '2024-01-01' },
+  { expertise_id: 3, lecturer_id: 2, expertise_name: 'Software Engineering', created_at: '2024-01-01' },
+  { expertise_id: 4, lecturer_id: 2, expertise_name: 'Web Systems', created_at: '2024-01-01' },
+  { expertise_id: 5, lecturer_id: 3, expertise_name: 'Information Systems', created_at: '2024-01-01' },
+  { expertise_id: 6, lecturer_id: 3, expertise_name: 'Analytics', created_at: '2024-01-01' },
+];
+
+export const lecturerInterests: LecturerInterest[] = [
+  { interest_id: 1, lecturer_id: 1, interest_name: 'Query optimization', created_at: '2024-01-01' },
+  { interest_id: 2, lecturer_id: 1, interest_name: 'Distributed databases', created_at: '2024-01-01' },
+  { interest_id: 3, lecturer_id: 2, interest_name: 'Frontend systems', created_at: '2024-01-01' },
+  { interest_id: 4, lecturer_id: 2, interest_name: 'Software quality', created_at: '2024-01-01' },
+  { interest_id: 5, lecturer_id: 3, interest_name: 'Decision support systems', created_at: '2024-01-01' },
+];
+
+export const nonAcademicStaff: NonAcademicStaff[] = [
+  {
+    staff_id: 1,
+    department_id: 1,
+    full_name: 'Sarah Mhlanga',
+    job_title: 'Lab Coordinator',
+    employment_type: 'Full-Time',
+    contract_details: 'Permanent',
+    salary_amount: 42000,
+    salary_currency: 'USD',
+    emergency_contact: '011-111-1111',
+    created_at: '2024-01-01',
+  },
+  {
+    staff_id: 2,
+    department_id: 2,
+    full_name: 'John Banda',
+    job_title: 'Department Administrator',
+    employment_type: 'Full-Time',
+    contract_details: 'Permanent',
+    salary_amount: 39000,
+    salary_currency: 'USD',
+    emergency_contact: '022-222-2222',
+    created_at: '2024-01-01',
+  },
 ];
 
 export const students: Student[] = [
@@ -208,10 +247,53 @@ export const courseLecturers = [
   { course_offering_id: 3, lecturer_id: 3 },
 ];
 
+export const researchProjects: ResearchProject[] = [
+  {
+    research_project_id: 1,
+    principal_investigator_lecturer_id: 1,
+    title: 'Distributed Query Planner',
+    start_date: '2025-01-10',
+    end_date: null,
+    outcome: 'In Progress',
+    created_at: '2025-01-01',
+  },
+  {
+    research_project_id: 2,
+    principal_investigator_lecturer_id: 1,
+    title: 'Database Tuning Dashboard',
+    start_date: '2025-02-01',
+    end_date: null,
+    outcome: 'In Progress',
+    created_at: '2025-02-01',
+  },
+  {
+    research_project_id: 3,
+    principal_investigator_lecturer_id: 2,
+    title: 'Frontend Testing Portal',
+    start_date: '2025-03-01',
+    end_date: null,
+    outcome: 'In Progress',
+    created_at: '2025-03-01',
+  },
+];
+
+export const researchProjectMembersLecturers: ResearchProjectMemberLecturer[] = [
+  { research_project_id: 1, lecturer_id: 1, member_role: 'Principal Investigator', created_at: '2025-01-01' },
+  { research_project_id: 2, lecturer_id: 1, member_role: 'Principal Investigator', created_at: '2025-02-01' },
+  { research_project_id: 3, lecturer_id: 2, member_role: 'Principal Investigator', created_at: '2025-03-01' },
+];
+
+export const researchProjectMembersStudents: ResearchProjectMemberStudent[] = [
+  { research_project_id: 1, student_id: 1, member_role: 'Research Assistant', created_at: '2025-01-01' },
+  { research_project_id: 2, student_id: 4, member_role: 'Research Assistant', created_at: '2025-02-01' },
+  { research_project_id: 3, student_id: 3, member_role: 'Research Assistant', created_at: '2025-03-01' },
+];
+
 export const lecturerPublications: LecturerPublication[] = [
   {
     publication_id: 1,
     lecturer_id: 1,
+    research_project_id: 1,
     title: 'Scalable SQL Query Optimisation',
     publication_date: '2025-02-10',
     venue: 'Journal of Database Systems',
@@ -220,6 +302,7 @@ export const lecturerPublications: LecturerPublication[] = [
   {
     publication_id: 2,
     lecturer_id: 2,
+    research_project_id: 3,
     title: 'Testing Modern User Interfaces',
     publication_date: '2025-03-04',
     venue: 'Software Engineering Review',
@@ -228,6 +311,7 @@ export const lecturerPublications: LecturerPublication[] = [
   {
     publication_id: 3,
     lecturer_id: 3,
+    research_project_id: null,
     title: 'Analytics for Academic Decision Systems',
     publication_date: '2024-11-18',
     venue: 'Information Systems Quarterly',
@@ -235,13 +319,25 @@ export const lecturerPublications: LecturerPublication[] = [
   },
 ];
 
-export const lecturerSupervisions = [
-  { supervision_id: 1, lecturer_id: 1, student_id: 1, project_title: 'Distributed Query Planner' },
-  { supervision_id: 2, lecturer_id: 1, student_id: 4, project_title: 'Database Tuning Dashboard' },
-  { supervision_id: 3, lecturer_id: 2, student_id: 3, project_title: 'Frontend Testing Portal' },
-];
-
-export const studentEmployees = [
-  { student_employee_id: 1, student_id: 1, program_id: 1, supervisor_staff_id: 4, role: 'Teaching Assistant' },
-  { student_employee_id: 2, student_id: 3, program_id: 1, supervisor_staff_id: 2, role: 'Research Assistant' },
+export const studentEmployment: StudentEmployment[] = [
+  {
+    employment_id: 1,
+    student_id: 1,
+    program_id: 1,
+    supervisor_staff_id: 1,
+    job_title: 'Teaching Assistant',
+    start_date: '2025-02-01',
+    end_date: null,
+    created_at: '2025-02-01',
+  },
+  {
+    employment_id: 2,
+    student_id: 3,
+    program_id: 1,
+    supervisor_staff_id: 1,
+    job_title: 'Research Assistant',
+    start_date: '2025-02-15',
+    end_date: null,
+    created_at: '2025-02-15',
+  },
 ];

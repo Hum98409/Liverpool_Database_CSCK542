@@ -5,13 +5,16 @@ import {
   courses,
   departments,
   enrollments,
+  lecturerExpertise,
+  lecturerInterests,
   lecturerPublications,
-  lecturerSupervisions,
   lecturers,
+  nonAcademicStaff,
   programs,
+  researchProjectMembersLecturers,
+  researchProjectMembersStudents,
   semesters,
-  staffMembers,
-  studentEmployees,
+  studentEmployment,
   studentGrades,
   students,
 } from './data';
@@ -46,7 +49,10 @@ export const handlers = [
 
   http.get(`${baseUrl}/lookups/course-offerings`, () => {
     return HttpResponse.json({
-      data: courseOfferings.map((co) => ({ label: `${co.course_code} - Section ${co.section}`, value: co.course_offering_id })),
+      data: courseOfferings.map((co) => ({
+        label: `${co.course_code} - Section ${co.section}`,
+        value: co.course_offering_id,
+      })),
     });
   }),
 
@@ -114,9 +120,14 @@ export const handlers = [
     const url = new URL(request.url);
     const semesterId = Number(url.searchParams.get('semesterId') ?? currentSemester.semester_id);
 
-    const offeringIds = courseOfferings.filter((co) => co.semester_id === semesterId).map((co) => co.course_offering_id);
+    const offeringIds = courseOfferings
+      .filter((co) => co.semester_id === semesterId)
+      .map((co) => co.course_offering_id);
+
     const registeredStudentIds = new Set(
-      enrollments.filter((e) => offeringIds.includes(e.course_offering_id)).map((e) => e.student_id)
+      enrollments
+        .filter((e) => offeringIds.includes(e.course_offering_id))
+        .map((e) => e.student_id)
     );
 
     const rows = students
@@ -139,6 +150,7 @@ export const handlers = [
     const url = new URL(request.url);
     const studentId = Number(url.searchParams.get('studentId'));
     const student = students.find((s) => s.student_id === studentId);
+
     if (!student) return HttpResponse.json({ data: null }, { status: 404 });
 
     const advisor = lecturers.find((l) => l.lecturer_id === student.advisor_lecturer_id)!;
@@ -159,21 +171,25 @@ export const handlers = [
     const keyword = (url.searchParams.get('keyword') ?? '').toLowerCase();
 
     const rows = lecturers
-      .filter(
-        (l) =>
-          l.areas_of_expertise.toLowerCase().includes(keyword) ||
-          l.research_interests.toLowerCase().includes(keyword)
-      )
-      .map((l) => {
-        const department = departments.find((d) => d.department_id === l.department_id)!;
+      .map((lecturer) => {
+        const department = departments.find((d) => d.department_id === lecturer.department_id)!;
+        const expertiseMatches = lecturerExpertise
+          .filter((e) => e.lecturer_id === lecturer.lecturer_id && e.expertise_name.toLowerCase().includes(keyword))
+          .map((e) => e.expertise_name);
+
+        const interestMatches = lecturerInterests
+          .filter((i) => i.lecturer_id === lecturer.lecturer_id && i.interest_name.toLowerCase().includes(keyword))
+          .map((i) => i.interest_name);
+
         return {
-          lecturer_id: l.lecturer_id,
-          full_name: l.full_name,
+          lecturer_id: lecturer.lecturer_id,
+          full_name: lecturer.full_name,
           department_name: department.name,
-          areas_of_expertise: l.areas_of_expertise,
-          research_interests: l.research_interests,
+          matched_expertise: expertiseMatches.join(', '),
+          matched_interest: interestMatches.join(', '),
         };
-      });
+      })
+      .filter((row) => row.matched_expertise || row.matched_interest);
 
     return HttpResponse.json({ data: rows });
   }),
@@ -185,7 +201,9 @@ export const handlers = [
     const rows = courseOfferings.flatMap((offering) => {
       const course = courses.find((c) => c.course_code === offering.course_code);
       if (!course || course.department_id !== departmentId) return [];
+
       const semester = semesters.find((s) => s.semester_id === offering.semester_id)!;
+
       return courseLecturers
         .filter((cl) => cl.course_offering_id === offering.course_offering_id)
         .map((cl) => {
@@ -207,15 +225,29 @@ export const handlers = [
     const url = new URL(request.url);
     const limit = Number(url.searchParams.get('limit') ?? 10);
 
+    const projectIdsWithStudents = new Set(
+      researchProjectMembersStudents.map((row) => row.research_project_id)
+    );
+
     const rows = lecturers
       .map((lecturer) => {
         const department = departments.find((d) => d.department_id === lecturer.department_id)!;
-        const count = lecturerSupervisions.filter((s) => s.lecturer_id === lecturer.lecturer_id).length;
+
+        const supervisedCount = new Set(
+          researchProjectMembersLecturers
+            .filter(
+              (row) =>
+                row.lecturer_id === lecturer.lecturer_id &&
+                projectIdsWithStudents.has(row.research_project_id)
+            )
+            .map((row) => row.research_project_id)
+        ).size;
+
         return {
           lecturer_id: lecturer.lecturer_id,
           lecturer_name: lecturer.full_name,
           department_name: department.name,
-          supervised_project_count: count,
+          supervised_project_count: supervisedCount,
         };
       })
       .sort((a, b) => b.supervised_project_count - a.supervised_project_count)
@@ -244,7 +276,11 @@ export const handlers = [
           doi: p.doi,
         };
       })
-      .filter((row) => (departmentId ? departments.find((d) => d.name === row.department_name)?.department_id === departmentId : true));
+      .filter((row) => {
+        if (!departmentId) return true;
+        const department = departments.find((d) => d.name === row.department_name);
+        return department?.department_id === departmentId;
+      });
 
     return HttpResponse.json({ data: rows });
   }),
@@ -273,36 +309,50 @@ export const handlers = [
     const url = new URL(request.url);
     const departmentId = Number(url.searchParams.get('departmentId'));
 
-    const rows = staffMembers
-      .filter((staff) => staff.department_id === departmentId)
-      .map((staff) => {
-        const department = departments.find((d) => d.department_id === staff.department_id)!;
-        const lecturer = lecturers.find((l) => l.email === staff.email);
-        return {
-          staff_name: staff.full_name,
-          email: staff.email,
-          department_name: department.name,
-          areas_of_expertise: lecturer?.areas_of_expertise ?? staff.role,
-        };
-      });
+    const department = departments.find((d) => d.department_id === departmentId)!;
 
-    return HttpResponse.json({ data: rows });
+    const lecturerRows = lecturers
+      .filter((lecturer) => lecturer.department_id === departmentId)
+      .map((lecturer) => ({
+        full_name: lecturer.full_name,
+        staff_type: 'Lecturer',
+        job_title: 'Lecturer',
+        department_name: department.name,
+        email: lecturer.email,
+      }));
+
+    const nonAcademicRows = nonAcademicStaff
+      .filter((staff) => staff.department_id === departmentId)
+      .map((staff) => ({
+        full_name: staff.full_name,
+        staff_type: 'Non-Academic Staff',
+        job_title: staff.job_title,
+        department_name: department.name,
+        email: '',
+      }));
+
+    return HttpResponse.json({ data: [...lecturerRows, ...nonAcademicRows] });
   }),
 
   http.get(`${baseUrl}/queries/program-student-employee-supervisors`, ({ request }) => {
     const url = new URL(request.url);
     const programId = Number(url.searchParams.get('programId'));
 
-    const rows = studentEmployees
-      .filter((se) => se.program_id === programId)
-      .map((se) => {
-        const student = students.find((s) => s.student_id === se.student_id)!;
-        const supervisor = staffMembers.find((staff) => staff.staff_id === se.supervisor_staff_id)!;
-        const program = programs.find((p) => p.program_id === se.program_id)!;
+    const rows = studentEmployment
+      .filter((employment) => employment.program_id === programId)
+      .map((employment) => {
+        const student = students.find((s) => s.student_id === employment.student_id)!;
+        const supervisor = nonAcademicStaff.find(
+          (staff) => staff.staff_id === employment.supervisor_staff_id
+        )!;
+        const program = programs.find((p) => p.program_id === employment.program_id)!;
         const department = departments.find((d) => d.department_id === program.department_id)!;
+
         return {
           supervisor_name: supervisor.full_name,
+          supervisor_job_title: supervisor.job_title,
           student_employee_name: student.full_name,
+          student_job_title: employment.job_title,
           program_name: program.name,
           department_name: department.name,
         };

@@ -41,7 +41,7 @@ describe('QueryCenterPage', () => {
     const queryListPanel = screen.getByTestId('query-list-panel');
 
     await user.click(
-      within(queryListPanel).getByText(/Lecturers by Research Area/i)
+      within(queryListPanel).getByText(/Lecturers by Expertise or Research Interest/i)
     );
 
     expect(screen.getByLabelText(/Keyword/i)).toBeInTheDocument();
