@@ -10,8 +10,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+type AuthProviderProps = {
+  children: ReactNode;
+  initialUser?: AuthUser | null;
+};
+
+export function AuthProvider({
+  children,
+  initialUser = null,
+}: AuthProviderProps) {
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
 
   const value = useMemo(
     () => ({
