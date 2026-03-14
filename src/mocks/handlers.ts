@@ -18,6 +18,7 @@ import {
   studentGrades,
   students,
 } from './data';
+import { mockCredentials } from './data';
 
 const baseUrl = 'http://localhost:8000/api';
 const currentSemester = semesters.find((s) => s.is_current)!;
@@ -29,6 +30,35 @@ function averageForStudent(studentId: number) {
 }
 
 export const handlers = [
+  http.get(`${baseUrl}/auth/login`, ({ request }) => {
+    const url = new URL(request.url);
+    const role = url.searchParams.get('role');
+    const password = url.searchParams.get('password');
+
+    if (role === 'teacher' && password === mockCredentials.teacher) {
+      return HttpResponse.json({
+        user: { role: 'teacher' },
+      });
+    }
+
+    if (role === 'student' && password === mockCredentials.student) {
+      return HttpResponse.json({
+        user: { role: 'student' },
+      });
+    }
+
+    if (role === 'non_academic_staff' && password === mockCredentials.non_academic_staff) {
+      return HttpResponse.json({
+        user: { role: 'non_academic_staff' },
+      });
+    }
+
+    return HttpResponse.json(
+      { message: 'Invalid role or password.' },
+      { status: 401 }
+    );
+  }),
+
   http.get(`${baseUrl}/dashboard/summary`, () => {
     return HttpResponse.json({
       totalStudents: students.length,

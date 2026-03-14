@@ -341,3 +341,9 @@ export const studentEmployment: StudentEmployment[] = [
     created_at: '2025-02-15',
   },
 ];
+
+export const mockCredentials = {
+  teacher: 'teacher123',
+  student: 'student123',
+  non_academic_staff: 'staff123',
+} as const;
