@@ -1,6 +1,6 @@
 # University Database Query Portal
 
-This repository contains the frontend UI for a university database query application built with React, TypeScript, and Vite. The purpose of the app is to provide a simple web interface through which users can run database queries, view results in tables, generate reports, and export results.
+This repository contains the frontend UI for a university database query application built with React, TypeScript, and Vite. The purpose of the app is to provide a simple web interface through which users can run database queries, view results in tables, generate reports, and export results. It now includes a lightweight FastAPI backend that connects to a Neon PostgreSQL database.
 ## What this app includes
 
 The UI supports a query-driven workflow and is designed around academic database use cases. The application includes:
@@ -32,6 +32,7 @@ Before running the project, install the following tools on your machine:
 
 - Node.js, preferably the current LTS version
 - npm, which normally comes with Node.js
+- Python 3.11+ (for the FastAPI backend)
 - Git
 - Visual Studio Code, if you want an easy editor experience
 
@@ -48,8 +49,7 @@ The node_modules folder is not stored in Git, which is normal. After cloning the
 npm install
 ```
 
-To start the development server, run:
-
+### Frontend: run and test
 
 ```bash
 npm run dev
@@ -59,3 +59,51 @@ To run all tests once:
 ```bash
 npm run test:run
 ```
+
+### Backend API (FastAPI + Neon)
+
+1) Create and activate a virtual environment, then install backend deps:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+2) Configure environment variables (FastAPI reads these):
+
+- `DATABASE_URL` – Neon connection string (required)
+- `CORS_ORIGINS` – comma-separated allowed origins (default: `http://localhost:5173`)
+
+You can place these in `backend/.env`, then load them before running:
+
+```bash
+export $(grep -v '^#' .env | xargs)
+```
+
+3) Start the API (default FastAPI app is `api.py` in `backend/`):
+
+```bash
+./.venv/bin/uvicorn api:app --reload --port 8000 --app-dir backend
+# If 8000 is busy, pick another port: --port 8020
+```
+
+API docs: http://127.0.0.1:8000/docs  
+Health check: http://127.0.0.1:8000/health
+
+### Frontend ↔ Backend integration
+
+Set the frontend base URL so requests go to FastAPI:
+
+```bash
+echo "VITE_API_BASE_URL=http://127.0.0.1:8000" > .env.local
+```
+
+Then start the frontend (`npm run dev`). The app’s API helper points to `VITE_API_BASE_URL` (falls back to `http://localhost:8000`).
+
+### Troubleshooting
+
+- **Port in use:** change `--port` on uvicorn and update `VITE_API_BASE_URL` to match.
+- **Cannot import module "api":** run uvicorn from the repo root with `--app-dir backend` or `cd backend` first.
+- **DATABASE_URL missing:** export it (or load `.env`) before starting uvicorn.

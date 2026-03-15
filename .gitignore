@@ -1,1 +1,9 @@
 node_modules
+
+# Backend Python env and secrets
+backend/.venv
+backend/.env
+
+# Python bytecode
+__pycache__/
+*.pyc
