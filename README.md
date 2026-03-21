@@ -123,8 +123,8 @@ Non Academic Staff: staff123
 
 ### Non Functional Requirements
 
-⁠Performance: Pages should load quickly and remain responsive during queries.
-Usability: The interface should be simple, clear and easy to navigate.
-Reliability: Errors and invalid input should be handled gracefully.
-Security: XSS should be reduced in the UI; SQL injection handled by the backend.
-Maintainability: Code should be modular, reusable and testable.
+- Performance: Pages should load quickly and remain responsive during queries.
+- Usability: The interface should be simple, clear and easy to navigate.
+- Reliability: Errors and invalid input should be handled gracefully.
+- Security: XSS should be reduced in the UI; SQL injection handled by the backend.
+- Maintainability: Code should be modular, reusable and testable.
