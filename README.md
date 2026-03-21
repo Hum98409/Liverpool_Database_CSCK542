@@ -114,3 +114,17 @@ Then start the frontend (`npm run dev`). The app’s API helper points to `VITE_
 - **Port in use:** change `--port` on uvicorn and update `VITE_API_BASE_URL` to match.
 - **Cannot import module "api":** run uvicorn from the repo root with `--app-dir backend` or `cd backend` first.
 - **DATABASE_URL missing:** export it (or load `.env`) before starting uvicorn.
+
+### Login Passwords
+
+Student: student123
+Lecturer: lecturer123
+Non Academic Staff: staff123
+
+### Non Functional Requirements
+
+⁠Performance: Pages should load quickly and remain responsive during queries.
+Usability: The interface should be simple, clear and easy to navigate.
+Reliability: Errors and invalid input should be handled gracefully.
+Security: XSS should be reduced in the UI; SQL injection handled by the backend.
+Maintainability: Code should be modular, reusable and testable.
