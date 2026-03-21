@@ -71,6 +71,13 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+If you plan to run the backend tests or install development tools, install the dev/test dependencies as well:
+
+```bash
+# from inside the backend folder (same venv)
+pip install -r requirements-dev.txt
+```
+
 2) Configure environment variables (FastAPI reads these):
 
 - `DATABASE_URL` – Neon connection string (required)
