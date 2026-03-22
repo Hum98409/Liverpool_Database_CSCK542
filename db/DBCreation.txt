@@ -1,0 +1,394 @@
+-- DBCreation.sql (ORDERED)
+-- Creates the full schema (31 tables) + indexes + view.
+
+BEGIN;
+
+-- 1) departments
+-- Academic units.
+CREATE TABLE departments (
+  department_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  name          TEXT NOT NULL UNIQUE,
+  faculty       TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2) department_research_areas
+-- Research areas per department.
+CREATE TABLE department_research_areas (
+  department_research_area_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  department_id               BIGINT NOT NULL REFERENCES departments(department_id) ON DELETE CASCADE,
+  research_area               TEXT NOT NULL,
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (department_id, research_area)
+);
+
+-- 3) programs
+-- Degree programs.
+CREATE TABLE programs (
+  program_id     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  department_id  BIGINT NOT NULL REFERENCES departments(department_id),
+  name           TEXT NOT NULL,
+  degree_awarded TEXT NOT NULL,
+  duration_years INTEGER NOT NULL CHECK (duration_years BETWEEN 1 AND 10),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (department_id, name)
+);
+
+-- 4) program_requirements
+-- Program requirements (free text).
+CREATE TABLE program_requirements (
+  program_requirement_id  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  program_id              BIGINT NOT NULL REFERENCES programs(program_id) ON DELETE CASCADE,
+  requirement_description TEXT NOT NULL,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 5) program_enrolment_details
+-- Enrolment details per program.
+CREATE TABLE program_enrolment_details (
+  enrolment_detail_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  program_id          BIGINT NOT NULL REFERENCES programs(program_id) ON DELETE CASCADE,
+  detail_description  TEXT NOT NULL,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 6) courses
+-- Course catalogue.
+CREATE TABLE courses (
+  course_code   TEXT PRIMARY KEY,
+  department_id BIGINT NOT NULL REFERENCES departments(department_id),
+  name          TEXT NOT NULL,
+  description   TEXT,
+  level         INTEGER NOT NULL CHECK (level BETWEEN 1 AND 10),
+  credits       INTEGER NOT NULL CHECK (credits BETWEEN 1 AND 60),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7) program_courses
+-- Program curriculum mapping.
+CREATE TABLE program_courses (
+  program_id  BIGINT NOT NULL REFERENCES programs(program_id) ON DELETE CASCADE,
+  course_code TEXT NOT NULL REFERENCES courses(course_code) ON DELETE RESTRICT,
+  PRIMARY KEY (program_id, course_code)
+);
+
+-- 8) course_prerequisites
+-- Prerequisite rules.
+CREATE TABLE course_prerequisites (
+  course_code              TEXT NOT NULL REFERENCES courses(course_code) ON DELETE CASCADE,
+  prerequisite_course_code TEXT NOT NULL REFERENCES courses(course_code) ON DELETE RESTRICT,
+  PRIMARY KEY (course_code, prerequisite_course_code),
+  CHECK (course_code <> prerequisite_course_code)
+);
+
+-- 9) course_materials
+-- Materials per course.
+CREATE TABLE course_materials (
+  course_material_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  course_code        TEXT NOT NULL REFERENCES courses(course_code) ON DELETE CASCADE,
+  title              TEXT NOT NULL,
+  url                TEXT,
+  material_type      TEXT NOT NULL DEFAULT 'Other',
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 10) semesters
+-- Academic terms.
+CREATE TABLE semesters (
+  semester_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code        TEXT NOT NULL UNIQUE,
+  start_date  DATE NOT NULL,
+  end_date    DATE NOT NULL,
+  is_current  BOOLEAN NOT NULL DEFAULT FALSE,
+  CHECK (end_date > start_date)
+);
+
+-- 11) lecturers
+-- Lecturer profiles.
+CREATE TABLE lecturers (
+  lecturer_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  department_id BIGINT NOT NULL REFERENCES departments(department_id),
+  full_name     TEXT NOT NULL,
+  email         TEXT UNIQUE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 12) lecturer_academic_qualifications
+-- Qualifications per lecturer.
+CREATE TABLE lecturer_academic_qualifications (
+  academic_qualification_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lecturer_id               BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  qualification_name        TEXT NOT NULL,
+  institution               TEXT,
+  year_awarded              INTEGER CHECK (year_awarded BETWEEN 1900 AND 2100),
+  created_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 13) lecturer_publications
+-- Publications per lecturer.
+CREATE TABLE lecturer_publications (
+  publication_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lecturer_id      BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  title            TEXT NOT NULL,
+  publication_date DATE NOT NULL,
+  venue            TEXT,
+  doi              TEXT
+);
+
+-- 14) lecturer_expertise
+-- Expertise tags per lecturer.
+CREATE TABLE lecturer_expertise (
+  expertise_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lecturer_id    BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  expertise_name TEXT NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (lecturer_id, expertise_name)
+);
+
+-- 15) lecturer_interests
+-- Interest tags per lecturer.
+CREATE TABLE lecturer_interests (
+  interest_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lecturer_id   BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  interest_name TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (lecturer_id, interest_name)
+);
+
+-- 16) students
+-- Student master records (advisor is a lecturer).
+CREATE TABLE students (
+  student_id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  program_id          BIGINT NOT NULL REFERENCES programs(program_id),
+  advisor_lecturer_id BIGINT REFERENCES lecturers(lecturer_id),
+  full_name           TEXT NOT NULL,
+  date_of_birth       DATE NOT NULL,
+  year_of_study       INTEGER NOT NULL CHECK (year_of_study BETWEEN 1 AND 12),
+  graduation_status   TEXT NOT NULL DEFAULT 'Not Graduated'
+    CHECK (graduation_status IN ('Not Graduated', 'Graduated', 'Withdrawn', 'Suspended')),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 17) student_contacts
+-- Contacts per student.
+CREATE TABLE student_contacts (
+  contact_id    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id    BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  contact_type  TEXT NOT NULL CHECK (contact_type IN ('Email', 'Phone', 'Address', 'Other')),
+  contact_value TEXT NOT NULL,
+  is_primary    BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- 18) student_disciplinary_records
+-- Disciplinary events per student.
+CREATE TABLE student_disciplinary_records (
+  disciplinary_record_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id             BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  record_date            DATE NOT NULL,
+  record_type            TEXT NOT NULL,
+  description            TEXT,
+  created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 19) student_organizations
+-- Orgs a student is registered for.
+CREATE TABLE student_organizations (
+  student_organization_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id              BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  organization_name       TEXT NOT NULL,
+  description             TEXT,
+  created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 20) course_offerings
+-- Course delivery per semester/section.
+CREATE TABLE course_offerings (
+  course_offering_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  course_code        TEXT NOT NULL REFERENCES courses(course_code) ON DELETE CASCADE,
+  semester_id        BIGINT NOT NULL REFERENCES semesters(semester_id),
+  section            TEXT NOT NULL DEFAULT 'A',
+  schedule_text      TEXT,
+  UNIQUE (course_code, semester_id, section)
+);
+
+-- 21) course_lecturers
+-- Teaching assignments.
+CREATE TABLE course_lecturers (
+  course_offering_id BIGINT NOT NULL REFERENCES course_offerings(course_offering_id) ON DELETE CASCADE,
+  lecturer_id        BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE RESTRICT,
+  PRIMARY KEY (course_offering_id, lecturer_id)
+);
+
+-- 22) enrollments
+-- Student registrations.
+CREATE TABLE enrollments (
+  enrollment_id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id         BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  course_offering_id BIGINT NOT NULL REFERENCES course_offerings(course_offering_id) ON DELETE CASCADE,
+  enrolled_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  status             TEXT NOT NULL DEFAULT 'Enrolled'
+    CHECK (status IN ('Enrolled', 'Dropped', 'Completed')),
+  UNIQUE (student_id, course_offering_id)
+);
+
+-- 23) student_grades
+-- Grades per student per offering.
+CREATE TABLE student_grades (
+  grade_id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id         BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  course_offering_id BIGINT NOT NULL REFERENCES course_offerings(course_offering_id) ON DELETE CASCADE,
+  assessment_name    TEXT NOT NULL,
+  score_percent      NUMERIC(5,2) NOT NULL CHECK (score_percent BETWEEN 0 AND 100),
+  graded_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (student_id, course_offering_id, assessment_name)
+);
+
+-- 24) non_academic_staff
+-- Admin/support staff.
+CREATE TABLE non_academic_staff (
+  staff_id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  department_id     BIGINT NOT NULL REFERENCES departments(department_id),
+  full_name         TEXT NOT NULL,
+  job_title         TEXT NOT NULL,
+  employment_type   TEXT NOT NULL CHECK (employment_type IN ('Full-time', 'Part-time', 'Contractor', 'Temporary')),
+  contract_details  TEXT,
+  salary_amount     NUMERIC(12,2),
+  salary_currency   TEXT NOT NULL DEFAULT 'USD',
+  emergency_contact TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 25) student_employment
+-- Student jobs supervised by staff.
+CREATE TABLE student_employment (
+  employment_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  student_id          BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  supervisor_staff_id BIGINT NOT NULL REFERENCES non_academic_staff(staff_id) ON DELETE RESTRICT,
+  program_id          BIGINT NOT NULL REFERENCES programs(program_id) ON DELETE RESTRICT,
+  job_title           TEXT NOT NULL DEFAULT 'Student Assistant',
+  start_date          DATE NOT NULL DEFAULT CURRENT_DATE,
+  end_date            DATE,
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+-- 26) research_groups
+-- Research groups (1-to-1 head lecturer).
+CREATE TABLE research_groups (
+  research_group_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  group_name        TEXT NOT NULL UNIQUE,
+  department_id     BIGINT REFERENCES departments(department_id) ON DELETE SET NULL,
+  head_lecturer_id  BIGINT NOT NULL UNIQUE REFERENCES lecturers(lecturer_id) ON DELETE RESTRICT,
+  description       TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 27) committees
+-- Committees linked to lecturers.
+CREATE TABLE committees (
+  committee_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  lecturer_id    BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  committee_name TEXT NOT NULL,
+  description    TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 28) research_projects
+-- Projects led by a PI lecturer.
+CREATE TABLE research_projects (
+  research_project_id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  title                              TEXT NOT NULL,
+  principal_investigator_lecturer_id BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE RESTRICT,
+  start_date                         DATE,
+  end_date                           DATE,
+  outcomes                           TEXT,
+  created_at                         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
+);
+
+-- 29) research_project_funding_sources
+-- Funding sources per project.
+CREATE TABLE research_project_funding_sources (
+  funding_source_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  research_project_id BIGINT NOT NULL REFERENCES research_projects(research_project_id) ON DELETE CASCADE,
+  source_name         TEXT NOT NULL,
+  amount              NUMERIC(14,2),
+  currency            TEXT NOT NULL DEFAULT 'USD',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 30) research_project_members_lecturers
+-- Lecturer members per project.
+CREATE TABLE research_project_members_lecturers (
+  research_project_id BIGINT NOT NULL REFERENCES research_projects(research_project_id) ON DELETE CASCADE,
+  lecturer_id         BIGINT NOT NULL REFERENCES lecturers(lecturer_id) ON DELETE CASCADE,
+  member_role         TEXT NOT NULL DEFAULT 'Member',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (research_project_id, lecturer_id)
+);
+
+-- 31) research_project_members_students
+-- Student members per project.
+CREATE TABLE research_project_members_students (
+  research_project_id BIGINT NOT NULL REFERENCES research_projects(research_project_id) ON DELETE CASCADE,
+  student_id          BIGINT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  member_role         TEXT NOT NULL DEFAULT 'Student Researcher',
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (research_project_id, student_id)
+);
+
+-- View: current_student_grades
+CREATE OR REPLACE VIEW current_student_grades AS
+SELECT
+  stgr.grade_id,
+  stgr.student_id,
+  stgr.course_offering_id,
+  stgr.assessment_name,
+  stgr.score_percent,
+  stgr.graded_at
+FROM student_grades stgr
+JOIN course_offerings cff
+  ON stgr.course_offering_id = cff.course_offering_id
+JOIN semesters smr
+  ON cff.semester_id = smr.semester_id
+WHERE smr.is_current = TRUE;
+
+-- Indexes
+CREATE INDEX idx_programs_department               ON programs(department_id);
+CREATE INDEX idx_courses_department                ON courses(department_id);
+
+CREATE INDEX idx_students_program                  ON students(program_id);
+CREATE INDEX idx_students_advisor                  ON students(advisor_lecturer_id);
+
+CREATE INDEX idx_course_offerings_semester         ON course_offerings(semester_id);
+CREATE INDEX idx_course_lecturers_lecturer         ON course_lecturers(lecturer_id);
+
+CREATE INDEX idx_enrollments_student               ON enrollments(student_id);
+CREATE INDEX idx_enrollments_offering              ON enrollments(course_offering_id);
+
+CREATE INDEX idx_grades_student_offering           ON student_grades(student_id, course_offering_id);
+
+CREATE INDEX idx_staff_department                  ON non_academic_staff(department_id);
+CREATE INDEX idx_student_employment_supervisor_prog ON student_employment(supervisor_staff_id, program_id);
+
+CREATE INDEX idx_publications_date                 ON lecturer_publications(publication_date);
+CREATE INDEX idx_qualifications_lecturer           ON lecturer_academic_qualifications(lecturer_id);
+CREATE INDEX idx_expertise_lecturer                ON lecturer_expertise(lecturer_id);
+CREATE INDEX idx_interests_lecturer                ON lecturer_interests(lecturer_id);
+
+CREATE INDEX idx_department_research_areas_dept     ON department_research_areas(department_id);
+CREATE INDEX idx_program_requirements_program       ON program_requirements(program_id);
+CREATE INDEX idx_program_enrolment_details_program  ON program_enrolment_details(program_id);
+CREATE INDEX idx_course_materials_course            ON course_materials(course_code);
+
+CREATE INDEX idx_student_contacts_student           ON student_contacts(student_id);
+CREATE INDEX idx_student_disciplinary_student       ON student_disciplinary_records(student_id);
+CREATE INDEX idx_student_org_student                ON student_organizations(student_id);
+
+CREATE INDEX idx_research_groups_department         ON research_groups(department_id);
+CREATE INDEX idx_committees_lecturer                ON committees(lecturer_id);
+
+CREATE INDEX idx_research_projects_pi               ON research_projects(principal_investigator_lecturer_id);
+CREATE INDEX idx_funding_project                    ON research_project_funding_sources(research_project_id);
+
+COMMIT;

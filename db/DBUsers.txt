@@ -1,0 +1,33 @@
+BEGIN;
+
+CREATE ROLE student LOGIN PASSWORD 'npg_fxToVzIC9B5O';
+CREATE ROLE lecturer LOGIN PASSWORD 'pg_yrGw9Z3foAPD';
+CREATE ROLE staff LOGIN PASSWORD 'npg_BzpJHbtLY4k0';
+
+-- Base access
+GRANT CONNECT ON DATABASE neondb TO student, lecturer, staff;
+GRANT USAGE  ON SCHEMA public   TO student, lecturer, staff;
+
+-- Prevent schema changes (DDL) for app roles
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+REVOKE CREATE ON SCHEMA public FROM student, lecturer, staff;
+
+-- Read-only roles (student + staff)
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO student, staff;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO student, staff;
+
+-- Lecturer: read/write data (DML only)
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO lecturer;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO lecturer;
+
+-- Default privileges for future tables created by the owner/admin
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT ON TABLES TO student, staff;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO lecturer;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT USAGE, SELECT ON SEQUENCES TO student, staff, lecturer;
+
+COMMIT;
