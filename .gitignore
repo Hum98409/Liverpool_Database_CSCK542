@@ -1,9 +1,48 @@
-node_modules
+# Dependencies
+node_modules/
+dist/
+build/
 
-# Backend Python env and secrets
+# Python environments and caches
 backend/.venv
-backend/.env
-
-# Python bytecode
+backend/venv
+.venv
+venv/
+env/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-workspace
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+.env.local
+.env.*.local
+dist-ssr/
+*.orig
+
+# Build artifacts
+*.tsbuildinfo
+out/

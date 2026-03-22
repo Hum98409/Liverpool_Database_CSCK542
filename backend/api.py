@@ -9,6 +9,7 @@ from psycopg_pool import AsyncConnectionPool
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL environment variable is required (Neon connection string)")
+assert DATABASE_URL is not None  # Type guard for type checker
 
 CORS_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()]
 
