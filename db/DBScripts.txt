@@ -1,0 +1,151 @@
+-- 1) Find all students enrolled in a specific course taught by a particular lecturer.
+SELECT DISTINCT
+       sts.student_id,
+       sts.full_name AS student_name
+FROM course_lecturers clt
+JOIN lecturers ltr
+  ON clt.lecturer_id = ltr.lecturer_id
+JOIN enrollments ell
+  ON clt.course_offering_id = ell.course_offering_id
+JOIN students sts
+  ON ell.student_id = sts.student_id
+JOIN course_offerings cff
+  ON cff.course_offering_id = clt.course_offering_id
+WHERE ell.status = 'Enrolled'
+  AND ltr.lecturer_id = 1
+  AND cff.course_code = 'CS310';
+
+-- 2) List all students with an average grade above 70% who are in their final year of studies.
+SELECT
+  sts.student_id,
+  sts.full_name AS student_name,
+  ROUND(AVG(stgr.score_percent)::numeric, 2) AS average_score_percent
+FROM student_grades stgr
+JOIN students sts
+  ON stgr.student_id = sts.student_id
+WHERE sts.year_of_study = 4
+GROUP BY sts.student_id, sts.full_name
+HAVING AVG(stgr.score_percent) > 70
+ORDER BY average_score_percent DESC;
+
+-- 3) Identify students who haven’t registered for any courses in the current semester.
+SELECT
+       sts.student_id,
+       sts.full_name AS student_name,
+       sts.year_of_study
+FROM students sts
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM semesters smr
+  JOIN course_offerings cff
+    ON smr.semester_id = cff.semester_id
+  JOIN enrollments ell
+    ON cff.course_offering_id = ell.course_offering_id
+  WHERE smr.is_current = TRUE
+    AND ell.student_id = sts.student_id
+);
+
+-- 4) Retrieve the contact information for the faculty advisor of a specific student.
+SELECT
+    sts.full_name AS student_name,
+    ltr.full_name AS advisor_name,
+    ltr.email     AS advisor_email
+FROM students sts
+JOIN lecturers ltr
+  ON sts.advisor_lecturer_id = ltr.lecturer_id
+WHERE sts.student_id = 1;
+
+-- 5) Search for lecturers with expertise in a particular research area.
+-- Updated to use lecturer_expertise / lecturer_interests (normalized tables).
+SELECT DISTINCT
+       ltr.lecturer_id,
+       ltr.full_name AS lecturer_name,
+       ltr.email     AS lecturer_email
+FROM lecturers ltr
+LEFT JOIN lecturer_expertise lex
+  ON lex.lecturer_id = ltr.lecturer_id
+LEFT JOIN lecturer_interests lin
+  ON lin.lecturer_id = ltr.lecturer_id
+WHERE lex.expertise_name ILIKE '%Databases%'
+   OR lin.interest_name ILIKE '%Databases%'
+ORDER BY ltr.full_name;
+
+-- 6) List all courses taught by lecturers in a specific department.
+SELECT DISTINCT
+       crs.course_code,
+       crs.name AS course_name
+FROM course_lecturers clt
+JOIN lecturers ltr
+  ON clt.lecturer_id = ltr.lecturer_id
+JOIN departments dpt
+  ON ltr.department_id = dpt.department_id
+JOIN course_offerings cff
+  ON clt.course_offering_id = cff.course_offering_id
+JOIN courses crs
+  ON cff.course_code = crs.course_code
+WHERE dpt.name = 'Computer Science'
+ORDER BY crs.course_code;
+
+-- 7) Identify lecturers who have supervised the most student research projects.
+SELECT
+       ltr.lecturer_id,
+       ltr.full_name AS lecturer_name,
+       COUNT(rpj.research_project_id) AS supervised_project_count
+FROM lecturers ltr
+JOIN research_projects rpj
+  ON rpj.principal_investigator_lecturer_id = ltr.lecturer_id
+GROUP BY ltr.lecturer_id, ltr.full_name
+ORDER BY supervised_project_count DESC, ltr.full_name
+LIMIT 1;
+
+-- 8) Generate a report on the publications of lecturers in the past year.
+SELECT
+       ltr.full_name AS lecturer_name,
+       lpu.title AS publication_title,
+       lpu.publication_date,
+       lpu.venue AS publication_venue,
+       lpu.doi AS publication_doi
+FROM lecturer_publications lpu
+JOIN lecturers ltr
+  ON lpu.lecturer_id = ltr.lecturer_id
+WHERE lpu.publication_date >= (CURRENT_DATE - INTERVAL '1 year')
+ORDER BY lpu.publication_date DESC, ltr.full_name;
+
+-- 9) Retrieve the names of students advised by a specific lecturer.
+SELECT
+       sts.student_id,
+       sts.full_name AS student_name,
+       ltr.full_name AS advisor_name
+FROM students sts
+JOIN lecturers ltr
+  ON sts.advisor_lecturer_id = ltr.lecturer_id
+WHERE ltr.lecturer_id = 1
+ORDER BY sts.full_name;
+
+-- 10) Find all staff members employed in a specific department.
+SELECT
+       stf.staff_id,
+       stf.full_name AS staff_name,
+       stf.job_title AS staff_job_title,
+       stf.employment_type AS staff_employment_type
+FROM non_academic_staff stf
+JOIN departments dpt
+  ON stf.department_id = dpt.department_id
+WHERE dpt.name = 'Computer Science'
+ORDER BY stf.full_name;
+
+-- 11) Identify employees who supervise student employees in a particular program.
+SELECT
+       stf.staff_id,
+       stf.full_name AS staff_name,
+       stf.job_title AS staff_job_title,
+       prg.name AS program_name,
+       COUNT(sep.employment_id) AS supervised_student_employee_count
+FROM student_employment sep
+JOIN non_academic_staff stf
+  ON sep.supervisor_staff_id = stf.staff_id
+JOIN programs prg
+  ON sep.program_id = prg.program_id
+WHERE prg.program_id = 1
+GROUP BY stf.staff_id, stf.full_name, stf.job_title, prg.name
+ORDER BY supervised_student_employee_count DESC, stf.full_name;

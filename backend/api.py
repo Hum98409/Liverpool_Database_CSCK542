@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException, Path, Query, Depends, Header
+from fastapi import FastAPI, HTTPException, Path, Query, Depends, Header, Body
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg_pool import AsyncConnectionPool
 
@@ -12,13 +12,20 @@ if not DATABASE_URL:
 
 CORS_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if origin.strip()]
 
-# Database connection pool
-pool = AsyncConnectionPool(
-    conninfo=DATABASE_URL,
-    max_size=5,
-    num_workers=3,
-    timeout=10,
-)
+# Database connection pool - initialized lazily to avoid issues with async context
+pool = None
+
+def get_pool():
+    """Get or create the connection pool lazily."""
+    global pool
+    if pool is None:
+        pool = AsyncConnectionPool(
+            conninfo=DATABASE_URL,
+            max_size=5,
+            num_workers=3,
+            timeout=10,
+        )
+    return pool
 
 API_KEY = os.getenv("API_KEY")
 
@@ -46,12 +53,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     # Open the pool and validate a connection on startup
-    await pool.open(wait=True)
+    await get_pool().open(wait=True)
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    await pool.close()
+    if pool is not None:
+        await pool.close()
 
 
 def _rows_to_dicts(cur, rows: List[tuple]) -> List[Dict[str, Any]]:
@@ -75,12 +83,11 @@ async def list_students(limit: int = Query(50, ge=1, le=1000), offset: int = Que
         "SELECT s.student_id AS id, s.full_name AS name, COALESCE(sc.contact_value, '') AS email "
         "FROM students s "
         "LEFT JOIN student_contacts sc ON sc.student_id = s.student_id AND sc.contact_type = 'email' AND sc.is_primary = true "
-        "ORDER BY s.student_id LIMIT 50;"
+        "ORDER BY s.student_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
-                # apply limit/offset
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
                 return _rows_to_dicts(cur, rows)
@@ -95,7 +102,7 @@ async def list_students(limit: int = Query(50, ge=1, le=1000), offset: int = Que
 async def lookup_students():
     query = "SELECT student_id AS value, full_name AS label FROM students ORDER BY full_name LIMIT 500;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -108,7 +115,7 @@ async def lookup_students():
 async def lookup_lecturers():
     query = "SELECT lecturer_id AS value, full_name AS label FROM lecturers ORDER BY full_name LIMIT 500;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -124,7 +131,7 @@ async def lookup_course_offerings():
         "FROM course_offerings ORDER BY course_offering_id LIMIT 500;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -137,7 +144,7 @@ async def lookup_course_offerings():
 async def lookup_semesters():
     query = "SELECT semester_id AS value, code AS label FROM semesters ORDER BY start_date DESC LIMIT 50;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -150,7 +157,7 @@ async def lookup_semesters():
 async def lookup_departments():
     query = "SELECT department_id AS value, name AS label FROM departments ORDER BY name;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -163,7 +170,7 @@ async def lookup_departments():
 async def lookup_programs():
     query = "SELECT program_id AS value, name AS label FROM programs ORDER BY name;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -179,7 +186,7 @@ async def lookup_programs():
 async def list_departments(limit: int = Query(100, ge=1, le=1000), offset: int = Query(0, ge=0)):
     query = "SELECT department_id, name, faculty, created_at FROM departments ORDER BY department_id"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -195,7 +202,7 @@ async def list_programs(limit: int = Query(100, ge=1, le=1000), offset: int = Qu
         "FROM programs ORDER BY program_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -211,7 +218,7 @@ async def list_lecturers(limit: int = Query(100, ge=1, le=1000), offset: int = Q
         "FROM lecturers ORDER BY lecturer_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -227,7 +234,7 @@ async def list_courses(limit: int = Query(100, ge=1, le=1000), offset: int = Que
         "FROM courses ORDER BY course_code"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -243,7 +250,7 @@ async def list_course_offerings(limit: int = Query(100, ge=1, le=1000), offset: 
         "FROM course_offerings ORDER BY course_offering_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -256,7 +263,7 @@ async def list_course_offerings(limit: int = Query(100, ge=1, le=1000), offset: 
 async def list_semesters(limit: int = Query(50, ge=1, le=1000), offset: int = Query(0, ge=0)):
     query = "SELECT semester_id, code, start_date, end_date, is_current FROM semesters ORDER BY start_date DESC"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -272,7 +279,7 @@ async def list_research_projects(limit: int = Query(100, ge=1, le=1000), offset:
         "FROM research_projects ORDER BY research_project_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -293,7 +300,7 @@ async def research_project_members(project_id: int = Path(..., alias="project_id
         "ORDER BY member_type;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (project_id, project_id))
                 rows = await cur.fetchall()
@@ -309,7 +316,7 @@ async def list_non_academic_staff(limit: int = Query(100, ge=1, le=1000), offset
         "FROM non_academic_staff ORDER BY staff_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -325,7 +332,7 @@ async def list_student_employments(limit: int = Query(100, ge=1, le=1000), offse
         "FROM student_employment ORDER BY employment_id"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query + " LIMIT %s OFFSET %s", (limit, offset))
                 rows = await cur.fetchall()
@@ -347,7 +354,7 @@ async def query_students_by_course_and_lecturer(courseOfferingId: int = Query(..
         "WHERE reg.course_offering_id = %s LIMIT 500;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (courseOfferingId,))
                 rows = await cur.fetchall()
@@ -361,7 +368,7 @@ async def query_final_year_top_students(minAverage: Optional[float] = Query(None
     # Basic implementation: return students in final year (year_of_study >= 4). minAverage ignored if no grades table exists.
     query = "SELECT student_id, full_name, year_of_study FROM students WHERE year_of_study >= 4 ORDER BY student_id LIMIT 100;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query)
                 rows = await cur.fetchall()
@@ -379,7 +386,7 @@ async def query_unregistered_current_semester(semesterId: int = Query(..., alias
         "WHERE s.student_id NOT IN (SELECT student_id FROM enrollments reg JOIN course_offerings co ON reg.course_offering_id = co.course_offering_id WHERE co.semester_id = %s) LIMIT 500;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (semesterId,))
                 rows = await cur.fetchall()
@@ -396,7 +403,7 @@ async def query_student_advisor_contact(studentId: int = Query(..., alias="stude
         "WHERE s.student_id = %s LIMIT 1;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (studentId,))
                 row = await cur.fetchone()
@@ -413,7 +420,7 @@ async def query_lecturers_by_research_area(keyword: str = Query(..., alias="keyw
         "WHERE le.expertise_name ILIKE %s LIMIT 200;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (f"%{keyword}%",))
                 rows = await cur.fetchall()
@@ -426,7 +433,7 @@ async def query_lecturers_by_research_area(keyword: str = Query(..., alias="keyw
 async def query_courses_by_department(departmentId: int = Query(..., alias="departmentId")):
     query = "SELECT course_code, name, level, credits FROM courses WHERE department_id = %s ORDER BY course_code LIMIT 500;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (departmentId,))
                 rows = await cur.fetchall()
@@ -442,7 +449,7 @@ async def query_top_project_supervisors(limit: int = Query(10, alias="limit")):
         "FROM research_projects GROUP BY principal_investigator_lecturer_id ORDER BY project_count DESC LIMIT %s;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (limit,))
                 rows = await cur.fetchall()
@@ -455,7 +462,7 @@ async def query_top_project_supervisors(limit: int = Query(10, alias="limit")):
 async def query_students_by_advisor(lecturerId: int = Query(..., alias="lecturerId")):
     query = "SELECT student_id, full_name FROM students WHERE advisor_lecturer_id = %s ORDER BY student_id LIMIT 500;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (lecturerId,))
                 rows = await cur.fetchall()
@@ -468,7 +475,7 @@ async def query_students_by_advisor(lecturerId: int = Query(..., alias="lecturer
 async def query_staff_by_department(departmentId: int = Query(..., alias="departmentId")):
     query = "SELECT staff_id, full_name, job_title FROM non_academic_staff WHERE department_id = %s ORDER BY staff_id LIMIT 500;"
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (departmentId,))
                 rows = await cur.fetchall()
@@ -484,7 +491,7 @@ async def query_program_student_employee_supervisors(programId: int = Query(...,
         "FROM student_employment se WHERE se.program_id = %s ORDER BY se.employment_id LIMIT 500;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, (programId,))
                 rows = await cur.fetchall()
@@ -509,7 +516,7 @@ async def report_lecturer_publications(year: int = Query(..., alias="year"), dep
         f"{where} ORDER BY lp.publication_date DESC LIMIT 100;"
     )
     try:
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(query, tuple(params))
                 rows = await cur.fetchall()
@@ -519,6 +526,32 @@ async def report_lecturer_publications(year: int = Query(..., alias="year"), dep
 
 
 # ---------- Dashboard summary ----------
+@app.post("/auth/login")
+async def login(role: str = Body(...), password: str = Body(...)):
+    try:
+        import psycopg
+        # Map frontend roles to backend DB roles
+        if role == "teacher":
+            db_role = "lecturer"
+        elif role == "non_academic_staff":
+            db_role = "staff"
+        else:
+            db_role = role
+        parts = DATABASE_URL.split("@")
+        if len(parts) != 2:
+            raise HTTPException(status_code=500, detail="Invalid DATABASE_URL format")
+        host_and_path = parts[1]
+        user_db_url = f"postgresql://{db_role}:{password}@{host_and_path}"
+        try:
+            test_conn = await psycopg.AsyncConnection.connect(user_db_url)
+            await test_conn.close()
+            return {"user": {"role": role}}
+        except Exception:
+            raise HTTPException(status_code=401, detail="Invalid role or password")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.get("/dashboard/summary")
@@ -533,7 +566,7 @@ async def dashboard_summary():
     }
     try:
         result: Dict[str, Any] = {}
-        async with pool.connection() as conn:
+        async with get_pool().connection() as conn:
             async with conn.cursor() as cur:
                 for key, q in queries.items():
                     await cur.execute(q)
