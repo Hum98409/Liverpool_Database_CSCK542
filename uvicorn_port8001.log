@@ -1,0 +1,8 @@
+INFO:     Will watch for changes in these directories: ['/Users/francescoitaliano/Liverpool_Database_CSCK542-3']
+INFO:     Uvicorn running on http://127.0.0.1:8001 (Press CTRL+C to quit)
+INFO:     Started reloader process [47311] using WatchFiles
+INFO:     Started server process [47314]
+INFO:     Waiting for application startup.
+/Users/francescoitaliano/Liverpool_Database_CSCK542-3/backend/.venv/lib/python3.14/site-packages/psycopg_pool/pool_async.py:163: RuntimeWarning: opening the async pool AsyncConnectionPool in the constructor is deprecated and will not be supported anymore in a future release. Please use `await pool.open()`, or use the pool as context manager using: `async with AsyncConnectionPool(...) as pool: `...
+  warnings.warn(
+INFO:     Application startup complete.
