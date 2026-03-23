@@ -117,9 +117,9 @@ Then start the frontend (`npm run dev`). The app’s API helper points to `VITE_
 
 ### Login Passwords
 
-Student: student123
-Lecturer: lecturer123
-Non Academic Staff: staff123
+Student: npg_fxToVzIC9B5O
+Lecturer: pg_yrGw9Z3foAPD
+Non Academic Staff: npg_BzpJHbtLY4k0
 
 ### Non Functional Requirements
 
